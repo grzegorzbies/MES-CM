@@ -1,8 +1,20 @@
-# Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation (MES-CM)
+"""MES-CM optimizers.
+
+Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation.
+"""
 
 import math
+
 import numpy as np
 from mealpy.optimizer import Optimizer
+
+
+ALGORITHM_NAME = "MES-CM"
+ALGORITHM_DESCRIPTION = (
+    "Metaheuristic Exponential Search Optimization with Covariance Matrix "
+    "adaptation (MES-CM)"
+)
+
 
 class MESCM(Optimizer):
     def __init__(
@@ -10,16 +22,16 @@ class MESCM(Optimizer):
         epoch=50000,
         pop_size=1,
         ft=-1e6,
-        prec=30, 
+        prec=30,
         sp=0.8,
         dp=0.35,
-        obs=40,        
-        **kwargs
+        obs=40,
+        **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.is_parallelizable = False
-        
+
         self.epoch = epoch
         self.pop_size = pop_size if pop_size is not None else 1
 
@@ -28,7 +40,7 @@ class MESCM(Optimizer):
         self.directionParameter = dp
         self.observations = obs
 
-        self.precision = prec        
+        self.precision = prec
 
     # ================= INIT =================
 
@@ -47,10 +59,10 @@ class MESCM(Optimizer):
 
         self._generatedValuesCount = 0
         self._sqrtGenerationsCount = 0
-        
+
         self.is_parallelizable = False
-        
-        self._logs = []                
+
+        self._logs = []
 
     def initialization(self):
         self.pop = self.generate_population(self.pop_size)
@@ -72,7 +84,7 @@ class MESCM(Optimizer):
 
         for i in range(dim):
             span = self._ub[i] - self._lb[i]
-            self._ranges.append(int(span * (10 ** self.precision)))
+            self._ranges.append(int(span * (10**self.precision)))
             self._denominators.append(span)
             self._standardValues.append((self._values[i] - self._lb[i]) / span)
 
@@ -144,7 +156,7 @@ class MESCM(Optimizer):
         if self._dataReady and directivity <= self.directionParameter:
             try:
                 dValues = np.matmul(self._L, dValues)
-            except:
+            except Exception:
                 self._dataReady = False
 
         return dValues
@@ -171,14 +183,14 @@ class MESCM(Optimizer):
 
             try:
                 self._L = np.linalg.cholesky(C + 1e-12 * np.eye(C.shape[0]))
-            except:
+            except Exception:
                 self._dataReady = False
 
         self._generatedValuesCount = 0
 
     def generateFromLevel(self, i, level):
-        Ux = level + (1 - level) * self.generator.random()
-        return self._ranges[i] ** (Ux - 1)
+        Ux = level + (1.0 - level) * self.generator.random()
+        return self._ranges[i] ** (Ux - 1.0)
 
     def addData(self, data):
         self._data[self._index] = data
@@ -188,19 +200,18 @@ class MESCM(Optimizer):
             self._index = 0
             self._dataReady = True
 
-    # ================= INFO =================
-    
-        
     def get_name(self):
-        return "MES-CM"
+        return ALGORITHM_NAME
 
     def get_extra_info(self):
-        return "Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation (MES-CM)"
+        return ALGORITHM_DESCRIPTION
 
     def get_log(self):
         return self._logs
 
+
 # Standalone version without MEALPY
+
 
 class MESCMStandalone:
     def __init__(
@@ -257,7 +268,7 @@ class MESCMStandalone:
         self._ub = np.asarray(ub, dtype=float)
 
         if self._lb.shape != self._ub.shape:
-            raise ValueError("lb i ub muszą mieć ten sam rozmiar.")
+            raise ValueError("lb and ub must have the same shape.")
 
         dim = len(self._lb)
 
@@ -281,9 +292,9 @@ class MESCMStandalone:
             span = self._ub[i] - self._lb[i]
 
             if span <= 0:
-                raise ValueError(f"Niepoprawny zakres dla zmiennej {i}: ub <= lb")
+                raise ValueError(f"Invalid bounds for variable {i}: ub <= lb.")
 
-            self._ranges.append(int(span * (10 ** self.precision)))
+            self._ranges.append(int(span * (10**self.precision)))
             self._denominators.append(span)
             self._standardValues.append((self._values[i] - self._lb[i]) / span)
 
@@ -337,16 +348,17 @@ class MESCMStandalone:
     def _is_better(self, fitness, best_fitness):
         if self.minmax == "min":
             return fitness < best_fitness
-        elif self.minmax == "max":
+
+        if self.minmax == "max":
             return fitness > best_fitness
-        else:
-            raise ValueError("minmax musi mieć wartość 'min' albo 'max'.")
+
+        raise ValueError("minmax must be either 'min' or 'max'.")
 
     def _stop_condition(self):
         if self.minmax == "min":
             return self.best_fitness <= self.ftarget
-        else:
-            return self.best_fitness >= self.ftarget
+
+        return self.best_fitness >= self.ftarget
 
     # ================= CORE =================
 
@@ -426,9 +438,7 @@ class MESCMStandalone:
             C = np.cov(self._data.T)
 
             try:
-                self._L = np.linalg.cholesky(
-                    C + 1e-12 * np.eye(C.shape[0])
-                )
+                self._L = np.linalg.cholesky(C + 1e-12 * np.eye(C.shape[0]))
             except Exception:
                 self._dataReady = False
 
@@ -437,7 +447,7 @@ class MESCMStandalone:
     def generateFromLevel(self, i, level):
         Ux = level + (1.0 - level) * self.generator.random()
 
-        # zabezpieczenie, gdy _ranges[i] jest zbyt małe
+        # Guard against ranges that are too small.
         if self._ranges[i] <= 0:
             return 0.0
 
@@ -454,10 +464,10 @@ class MESCMStandalone:
     # ================= INFO =================
 
     def get_name(self):
-        return "MES-CM"
+        return ALGORITHM_NAME
 
     def get_extra_info(self):
-        return "Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation (MES-CM)"
+        return ALGORITHM_DESCRIPTION
 
     def get_log(self):
         return self._logs
