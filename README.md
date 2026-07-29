@@ -1,59 +1,272 @@
-# MES-CM optimization algorithm
-A new optimization algorithm, called Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation (MES-CM).
+# MES-CM: Metaheuristic Exponential Search Optimization with Covariance Matrix Adaptation
+
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![MEALPY](https://img.shields.io/badge/MEALPY-compatible-green.svg)](https://mealpy.readthedocs.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**MES-CM** is a single-solution metaheuristic optimization algorithm based on exponential pseudo-random sampling and covariance-guided search.
+
+The method was designed as a non-metaphor-based optimizer that generates candidate solutions over multiple search scales. It combines short-range refinements with occasional longer exploratory moves and uses covariance information estimated from previously accepted solutions to guide the search direction.
+
+---
 
 ## Table of contents
-* [General info](#general-info)
-* [Technologies](#technologies)
-* [Usage](#usage)
-* [Contact](#contact)
 
-## General info
-Metaheuristic Exponential Search Optimization with Covariance Matrix adaptation (MES-CM) is a new optimization algorithm that, unlike most known population-based algorithms, uses only a single candidate solution throughout the optimization process. The operation of MES-CM is based on a proposed pseudorandom number generator, which is used to determine new values ​​for decision variables in subsequent iterations of the algorithm. Additionally, the algorithm adapts the covariance matrix, ensuring that each subsequent iteration uses a proposed solution (candidate) that is potentially better suited to the environment than previous iterations.
+- [Overview](#overview)
+- [Main features](#main-features)
+- [Repository structure](#repository-structure)
+- [Installation](#installation)
+- [Usage with MEALPY](#usage-with-mealpy)
+- [Standalone usage](#standalone-usage)
+- [Parameters](#parameters)
+  - [`MESCM`](#mescm)
+  - [`MESCMStandalone`](#mescmstandalone)
+- [Optimization log](#optimization-log)
+- [Notes](#notes)
+- [Authors](#authors)
+- [License](#license)
 
-## Technologies
-* Python
+---
 
-## Usage
+## Overview
 
+**Metaheuristic Exponential Search Optimization with Covariance Matrix Adaptation (MES-CM)** is a compact optimization method intended for continuous numerical optimization problems.
 
+Unlike population-based metaheuristics, MES-CM operates with a single candidate solution. During the search process, the algorithm repeatedly generates a new candidate around the current solution. If the candidate improves the objective function value, it is accepted and becomes the new reference point for the next search step.
+
+The main idea behind MES-CM is to use an exponential pseudo-random sampling mechanism to generate search steps over different distance scales. This allows the algorithm to perform both local exploitation and broader exploration without relying on a population of candidate solutions.
+
+To improve directional search, MES-CM also uses a covariance-guided transformation. The covariance information is estimated from previously accepted solutions stored in a small observation archive. Once enough accepted solutions have been collected, this information is used to transform newly generated search steps according to the estimated local structure of the search space.
+
+The repository provides two implementations:
+
+| Class | Description |
+|---|---|
+| `MESCM` | MEALPY-compatible optimizer |
+| `MESCMStandalone` | Standalone implementation with a simple Python interface |
+
+Both implementations are intended for **minimization problems**.
+
+---
+
+## Main features
+
+- Single-solution optimization framework
+- Exponential pseudo-random sampling mechanism
+- Multi-scale candidate generation
+- Covariance-guided transformation based on accepted solutions
+- Optional target-fitness stopping condition
+- MEALPY-compatible implementation
+- Standalone implementation without using the MEALPY optimizer interface
+- Simple improvement log containing accepted objective function improvements
+
+---
+
+## Repository structure
+
+```text
+MES-CM/
+├── MESCM.py        # MES-CM implementation
+├── README.md      # Project documentation
+├── LICENSE        # MIT license
+└── .gitignore
 ```
-from MESCM import MESCMStandalone
-import numpy as np
 
-def sphere(x):
-    return np.sum(x ** 2)
+---
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/grzegorzbies/MES-CM.git
+cd MES-CM
+```
+
+Install the required dependencies:
+
+```bash
+pip install numpy mealpy
+```
+
+`mealpy` is required for the `MESCM` class. The standalone implementation uses only `numpy`, but if both classes are stored in the same `MESCM.py` file, installing `mealpy` is recommended.
+
+---
+
+## Usage with MEALPY
+
+The `MESCM` class is compatible with the MEALPY optimizer interface.
+
+```python
+import numpy as np
+from mealpy import FloatVar
+from MESCM import MESCM
+
+
+def sphere(solution):
+    solution = np.asarray(solution, dtype=float)
+    return np.sum(solution ** 2)
+
+
+problem = {
+    "obj_func": sphere,
+    "bounds": FloatVar(
+        lb=(-10.0,) * 30,
+        ub=(10.0,) * 30,
+        name="x",
+    ),
+    "minmax": "min",
+    "name": "Sphere",
+    "log_to": "console",
+}
+
+
+model = MESCM(
+    epoch=10000,
+    pop_size=1,
+    ft=1e-12,
+    prec=30,
+    sp=0.8,
+    dp=0.35,
+    obs=40,
+)
+
+g_best = model.solve(problem)
+
+print("Best solution:", g_best.solution)
+print("Best fitness:", g_best.target.fitness)
+print("Improvement log:", model.get_log())
+```
+
+---
+
+## Standalone usage
+
+The standalone version can be used without the standard MEALPY problem dictionary.
+
+```python
+import numpy as np
+from MESCM import MESCMStandalone
 
 
 def rosenbrock(x):
     x = np.asarray(x, dtype=float)
-
     return np.sum(
-        100.0 * (x[:-1] ** 2 - x[1:]) ** 2
+        100.0 * (x[1:] - x[:-1] ** 2) ** 2
         + (x[:-1] - 1.0) ** 2
     )
 
-lb = [-10, -10, -10]
-ub = [10, 10, 10]
+
+lb = [-10.0, -10.0, -10.0]
+ub = [10.0, 10.0, 10.0]
 
 model = MESCMStandalone(
     epoch=10000,
     seed=100,
     ft=1e-12,
-    minmax="min"
+    prec=30,
+    sp=0.8,
+    dp=0.35,
+    obs=40,
 )
 
 result = model.solve(
-    #obj_func=sphere,
     obj_func=rosenbrock,
     lb=lb,
     ub=ub,
-    verbose=True
+    verbose=True,
 )
 
 print("Best fitness:", result["best_fitness"])
 print("Best solution:", result["best_solution"])
-
+print("Improvement log:", result["log"])
 ```
 
-## Contact
-Created by Grzegorz Bieś [grzegorzbies75@gmail.com] & Ernest Bieś [ernestbies@gmail.com]
+The standalone implementation solves minimization problems. To solve a maximization problem, convert it to minimization, for example:
+
+```python
+def objective_to_minimize(x):
+    return -original_function_to_maximize(x)
+```
+
+---
+
+## Parameters
+
+### `MESCM`
+
+| Parameter | Default | Description |
+|---|---:|---|
+| `epoch` | `50000` | Maximum number of iterations |
+| `pop_size` | `1` | Population size required by the MEALPY interface; MES-CM is a single-solution method |
+| `ft` | `-1e6` | Target fitness value used as an optional stopping condition |
+| `prec` | `30` | Precision parameter used in the exponential sampling mechanism |
+| `sp` | `0.8` | Search parameter controlling the use of standard-deviation-based scaling |
+| `dp` | `0.35` | Direction parameter controlling the use of covariance-guided transformation |
+| `obs` | `40` | Number of accepted solutions stored for covariance estimation |
+
+### `MESCMStandalone`
+
+| Parameter | Default | Description |
+|---|---:|---|
+| `epoch` | `50000` | Maximum number of iterations |
+| `ft` | `-1e6` | Target fitness value used as an optional stopping condition |
+| `prec` | `30` | Precision parameter used in the exponential sampling mechanism |
+| `sp` | `0.8` | Search parameter controlling the use of standard-deviation-based scaling |
+| `dp` | `0.35` | Direction parameter controlling the use of covariance-guided transformation |
+| `obs` | `40` | Number of accepted solutions stored for covariance estimation |
+| `seed` | `None` | Random seed used by the standalone implementation |
+
+---
+
+## Optimization log
+
+Both implementations provide a log of accepted improvements.
+
+For `MESCM`:
+
+```python
+log = model.get_log()
+```
+
+For `MESCMStandalone`:
+
+```python
+result = model.solve(obj_func, lb, ub)
+log = result["log"]
+```
+
+The log contains tuples in the following format:
+
+```text
+(epoch, fitness)
+```
+
+where `epoch` is the iteration in which an improved candidate was accepted, and `fitness` is the corresponding objective function value.
+
+---
+
+## Notes
+
+- MES-CM is a single-solution algorithm.
+- The algorithm is intended for minimization problems.
+- The MEALPY-compatible class uses `pop_size=1` by default.
+- The algorithm is not designed for parallel population evaluation.
+- The covariance-guided mechanism is activated after enough accepted solutions have been collected.
+- The standalone version returns a dictionary containing the best solution, best fitness, and optimization log.
+- For reproducible experiments, several independent runs should be performed and reported.
+
+---
+
+## Authors
+
+Created by:
+
+- Grzegorz Bieś
+- Ernest Bieś
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
