@@ -212,7 +212,6 @@ class MESCM(Optimizer):
 
 # Standalone version without MEALPY
 
-
 class MESCMStandalone:
     def __init__(
         self,
@@ -223,7 +222,6 @@ class MESCMStandalone:
         dp=0.35,
         obs=40,
         seed=None,
-        minmax="min",
     ):
         self.epoch = epoch
         self.ftarget = ft
@@ -236,8 +234,6 @@ class MESCMStandalone:
         self.seed = seed
         self.generator = np.random.default_rng(seed)
 
-        self.minmax = minmax
-
         self._ranges = None
         self._lb = None
         self._ub = None
@@ -246,6 +242,7 @@ class MESCMStandalone:
         self._values = None
         self._standardValues = None
         self._std = None
+        self._L = None
 
         self._data = None
         self._index = 0
@@ -302,7 +299,8 @@ class MESCMStandalone:
         self._denominators = np.array(self._denominators, dtype=float)
         self._standardValues = np.array(self._standardValues, dtype=float)
 
-        self._std = np.ones(dim)
+        self._std = None
+        self._L = None
 
         self._index = 0
         self._dataReady = False
@@ -320,18 +318,18 @@ class MESCMStandalone:
 
             fitness = self._evaluate(candidate_values)
 
-            if self._is_better(fitness, self.best_fitness):
+            if fitness < self.best_fitness:
                 self.setValuesFromCandidate(candidate_standard)
 
                 self.best_solution = candidate_values.copy()
                 self.best_fitness = fitness
 
-                self._logs.append((epoch, fitness, self.best_solution.copy()))
+                self._logs.append((epoch, fitness))
 
                 if verbose:
                     print(f"Epoch: {epoch}, Best fitness: {fitness}")
 
-            if self._stop_condition():
+            if self.best_fitness <= self.ftarget:
                 break
 
         return {
@@ -344,21 +342,6 @@ class MESCMStandalone:
 
     def _evaluate(self, x):
         return float(self.obj_func(np.asarray(x, dtype=float)))
-
-    def _is_better(self, fitness, best_fitness):
-        if self.minmax == "min":
-            return fitness < best_fitness
-
-        if self.minmax == "max":
-            return fitness > best_fitness
-
-        raise ValueError("minmax must be either 'min' or 'max'.")
-
-    def _stop_condition(self):
-        if self.minmax == "min":
-            return self.best_fitness <= self.ftarget
-
-        return self.best_fitness >= self.ftarget
 
     # ================= CORE =================
 
@@ -414,7 +397,6 @@ class MESCMStandalone:
         dValues = self._checkValues(self._getDValues())
 
         candidate = self._standardValues + dValues
-        candidate = np.clip(candidate, 0.0, 1.0)
 
         self._generatedValuesCount += 1
 
@@ -422,8 +404,7 @@ class MESCMStandalone:
 
     def convertStandardValuesToValues(self, standardValues):
         standardValues = np.asarray(standardValues, dtype=float)
-        values = self._lb + standardValues * self._denominators
-        return np.clip(values, self._lb, self._ub)
+        return self._lb + standardValues * self._denominators
 
     def setValuesFromCandidate(self, candidate):
         self._values = self.convertStandardValuesToValues(candidate)
@@ -446,11 +427,6 @@ class MESCMStandalone:
 
     def generateFromLevel(self, i, level):
         Ux = level + (1.0 - level) * self.generator.random()
-
-        # Guard against ranges that are too small.
-        if self._ranges[i] <= 0:
-            return 0.0
-
         return self._ranges[i] ** (Ux - 1.0)
 
     def addData(self, data):
@@ -473,6 +449,9 @@ class MESCMStandalone:
         return self._logs
 
     def get_best_solution(self):
+        if self.best_solution is None:
+            return None
+
         return self.best_solution.copy()
 
     def get_best_fitness(self):
