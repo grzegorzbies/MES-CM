@@ -16,6 +16,8 @@ The method was designed as a non-metaphor-based optimizer that generates candida
 - [Main features](#main-features)
 - [Repository structure](#repository-structure)
 - [Installation](#installation)
+  - [Standalone installation](#standalone-installation)
+  - [MEALPY installation](#mealpy-installation)
 - [Usage with MEALPY](#usage-with-mealpy)
 - [Standalone usage](#standalone-usage)
 - [Parameters](#parameters)
@@ -38,14 +40,16 @@ The main idea behind MES-CM is to use an exponential pseudo-random sampling mech
 
 To improve directional search, MES-CM also uses a covariance-guided transformation. The covariance information is estimated from previously accepted solutions stored in a small observation archive. Once enough accepted solutions have been collected, this information is used to transform newly generated search steps according to the estimated local structure of the search space.
 
-The repository provides two implementations:
+The repository provides two implementations in separate files:
 
-| Class | Description |
-|---|---|
-| `MESCM` | MEALPY-compatible optimizer |
-| `MESCMStandalone` | Standalone implementation with a simple Python interface |
+| File | Class | Description |
+|---|---|---|
+| `MESCM.py` | `MESCM` | MEALPY-compatible optimizer |
+| `MESCMStandalone.py` | `MESCMStandalone` | Standalone implementation with a simple Python interface |
 
 Both implementations are intended for **minimization problems**.
+
+The classes are separated so that `MESCMStandalone` can be used without installing MEALPY.
 
 ---
 
@@ -57,7 +61,7 @@ Both implementations are intended for **minimization problems**.
 - Covariance-guided transformation based on accepted solutions
 - Optional target-fitness stopping condition
 - MEALPY-compatible implementation
-- Standalone implementation without using the MEALPY optimizer interface
+- Standalone implementation without MEALPY dependency
 - Simple improvement log containing accepted objective function improvements
 
 ---
@@ -66,9 +70,10 @@ Both implementations are intended for **minimization problems**.
 
 ```text
 MES-CM/
-├── MESCM.py        # MES-CM implementation
-├── README.md      # Project documentation
-├── LICENSE        # MIT license
+├── MESCM.py              # MEALPY-compatible MES-CM implementation
+├── MESCMStandalone.py    # Standalone MES-CM implementation without MEALPY
+├── README.md            # Project documentation
+├── LICENSE              # MIT license
 └── .gitignore
 ```
 
@@ -83,19 +88,29 @@ git clone https://github.com/grzegorzbies/MES-CM.git
 cd MES-CM
 ```
 
-Install the required dependencies:
+### Standalone installation
+
+If you want to use only `MESCMStandalone`, install only NumPy:
+
+```bash
+pip install numpy
+```
+
+This version does not require MEALPY.
+
+### MEALPY installation
+
+If you want to use the MEALPY-compatible `MESCM` class, install both NumPy and MEALPY:
 
 ```bash
 pip install numpy mealpy
 ```
 
-`mealpy` is required for the `MESCM` class. The standalone implementation uses only `numpy`, but if both classes are stored in the same `MESCM.py` file, installing `mealpy` is recommended.
-
 ---
 
 ## Usage with MEALPY
 
-The `MESCM` class is compatible with the MEALPY optimizer interface.
+Use this version if you want to run MES-CM through the MEALPY optimizer interface.
 
 ```python
 import numpy as np
@@ -142,11 +157,11 @@ print("Improvement log:", model.get_log())
 
 ## Standalone usage
 
-The standalone version can be used without the standard MEALPY problem dictionary.
+Use this version if you want to run MES-CM without MEALPY.
 
 ```python
 import numpy as np
-from MESCM import MESCMStandalone
+from MESCMStandalone import MESCMStandalone
 
 
 def rosenbrock(x):
@@ -251,6 +266,7 @@ where `epoch` is the iteration in which an improved candidate was accepted, and 
 - MES-CM is a single-solution algorithm.
 - The algorithm is intended for minimization problems.
 - The MEALPY-compatible class uses `pop_size=1` by default.
+- `MESCMStandalone` does not require MEALPY.
 - The algorithm is not designed for parallel population evaluation.
 - The covariance-guided mechanism is activated after enough accepted solutions have been collected.
 - The standalone version returns a dictionary containing the best solution, best fitness, and optimization log.
