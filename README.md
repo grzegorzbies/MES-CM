@@ -25,6 +25,7 @@ The method was designed as a non-metaphor-based optimizer that generates candida
   - [`MESCMStandalone`](#mescmstandalone)
 - [Optimization log](#optimization-log)
 - [Notes](#notes)
+- [Citation](#citation)
 - [Authors](#authors)
 - [License](#license)
 
@@ -271,7 +272,25 @@ where `epoch` is the iteration in which an improved candidate was accepted, and 
 - The covariance-guided mechanism is activated after enough accepted solutions have been collected.
 - The standalone version returns a dictionary containing the best solution, best fitness, and optimization log.
 - For reproducible experiments, several independent runs should be performed and reported.
+---
 
+## Citation
+
+If you use MES-CM in your research, please cite the related publication:
+
+```bibtex
+@article{bies2026metaheuristic,
+  title={Metaheuristic Exponential Search Optimization with Covariance Matrix Adaptation (MES-CM)},
+  author={Bie{\'s}, Grzegorz and Bie{\'s}, Ernest},
+  journal={Evolutionary Intelligence},
+  volume={19},
+  number={5},
+  pages={124},
+  year={2026},
+  publisher={Springer}
+  doi={10.1007/s12065-026-01242-y}
+}
+```
 ---
 
 ## Authors
