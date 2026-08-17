@@ -287,7 +287,7 @@ If you use MES-CM in your research, please cite the related publication:
   number={5},
   pages={124},
   year={2026},
-  publisher={Springer}
+  publisher={Springer},
   doi={10.1007/s12065-026-01242-y}
 }
 ```
